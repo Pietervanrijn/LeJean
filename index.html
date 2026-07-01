@@ -172,9 +172,10 @@
         var city = (o.billingAddress && o.billingAddress.city) || '';
         var countryCode = (o.billingAddress && (o.billingAddress.countryCode || o.billingAddress.country)) || '';
         var flag = getFlagEmoji(countryCode);
-        var itemCount = o.itemCount || o.productsCount || o.quantityOrdered || (o.products ? o.products.length : null);
+        var prods = Array.isArray(o.products) ? o.products : [];
+        var itemCount = o.itemCount || o.productsCount || o.quantityOrdered || (prods.length > 0 ? prods.length : null);
         var itemLabel = itemCount ? itemCount + ' Item' + (itemCount !== 1 ? 's' : '') : '-';
-        var qty = o.quantityOrdered || (o.products ? o.products.reduce(function(s,p){return s+(p.quantityOrdered||1);},0) : null);
+        var qty = o.quantityOrdered || (prods.length > 0 ? prods.reduce(function(s,p){return s+(p.quantityOrdered||1);},0) : null);
         var qtyText = qty ? 'Hoeveelheid: ' + qty : '';
         var valText = total !== '-' ? 'Waarde: ' + total : '';
 
