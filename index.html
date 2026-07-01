@@ -162,8 +162,8 @@
         return;
       }
       var rows = orders.map(function(o) {
-        var klant = o._klant || o.email || 'Onbekend';
-        var ordNummer = o._ordNummer || ('ORD' + o.number) || String(o.id) || '-';
+        var klant = o._klant || [o.firstname, o.middlename, o.lastname].filter(Boolean).join(' ') || o.email || 'Onbekend';
+        var ordNummer = o._ordNummer || o.number || String(o.id) || '-';
         var total = o.priceIncl ? String.fromCharCode(8364) + ' ' + parseFloat(o.priceIncl).toFixed(2).replace('.',',') : '-';
         var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('nl-NL', {day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
         var ship = o._shippingMethod || 'DAGBEZORGING';
