@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chill-Bill | DAGBEZORGING Orders</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;min-height:100vh}
+    .header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:20px 30px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+    .logo{font-size:28px;font-weight:700;letter-spacing:1px}
+    .logo span{color:#4fc3f7}
+    .header-right{display:flex;align-items:center;gap:16px}
+    .updated{font-size:12px;color:rgba(255,255,255,.6)}
+    .refresh-btn{background:#4fc3f7;color:#1a1a2e;border:none;padding:10px 24px;border-radius:25px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+    .refresh-btn:hover{background:#81d4fa;transform:scale(1.05)}
+    .refresh-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .container{max-width:1200px;margin:30px auto;padding:0 20px}
+    .stats{background:#fff;border-radius:12px;padding:20px 30px;margin-bottom:24px;display:flex;align-items:center;gap:20px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    .count{font-size:48px;font-weight:800;color:#1a1a2e;line-height:1}
+    .stats-labels{display:flex;flex-direction:column;gap:6px}
+    .stats-title{font-size:14px;color:#666}
+    .badge{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;display:inline-block}
+    .badge-green{background:#e8f5e9;color:#2e7d32}
+    .badge-blue{background:#e3f2fd;color:#1565c0}
+    .orders-grid{display:grid;gap:16px}
+    .order-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);border-left:4px solid #4fc3f7;transition:transform .2s,box-shadow .2s;cursor:default}
+    .order-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.12)}
+    .order-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .order-num{font-size:19px;font-weight:700;color:#1a1a2e}
+    .status-badge{background:#e3f2fd;color:#1565c0;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600}
+    .order-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+    .field-label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+    .field-val{font-size:14px;color:#333;font-weight:500}
+    .ship-badge{display:inline-block;background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:15px;font-size:12px;font-weight:600}
+    .spinner{width:16px;height:16px;border:2px solid rgba(26,26,46,.3);border-top-color:#1a1a2e;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .empty{text-align:center;padding:80px 20px;color:#999}
+    .empty-icon{font-size:64px;margin-bottom:16px}
+    .empty p{font-size:16px}
+    .error-box{background:#ffebee;color:#c62828;border-radius:12px;padding:16px 20px;margin-bottom:16px;font-weight:500}
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">Chill<span>-Bill</span></div>
+  <div class="header-right">
+    <span class="updated" id="updated"></span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadOrders()">
+      <span>&#8635;</span> Vernieuwen
+    </button>
+  </div>
+</div>
+<div class="container">
+  <div class="stats">
+    <div class="count" id="count">-</div>
+    <div class="stats-labels">
+      <div class="stats-title">Orders klaar voor verzending</div>
+      <div>
+        <span class="badge badge-green">&#128666; DAGBEZORGING</span>
+        <span class="badge badge-blue" style="margin-left:8px">Klaar voor verzending</span>
+      </div>
+    </div>
+  </div>
+  <div id="errorBox"></div>
+  <div class="orders-grid" id="ordersContainer">
+    <div class="empty"><div class="empty-icon">&#9203;</div><p>Orders worden geladen...</p></div>
+  </div>
+</div>
+<script>
+async function loadOrders() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Laden...';
+  document.getElementById('errorBox').innerHTML = '';
+  try {
+    const res = await fetch('/api/orders');
+    if (!res.ok) throw new Error('Server error: ' + res.status);
+    const data = await res.json();
+    renderOrders(data.orders || []);
+    document.getElementById('updated').textContent = 'Bijgewerkt: ' + new Date().toLocaleTimeString('nl-NL');
+  } catch(err) {
+    document.getElementById('errorBox').innerHTML = '<div class="error-box">&#10060; ' + err.message + '</div>';
+    document.getElementById('ordersContainer').innerHTML = '<div class="empty"><div class="empty-icon">&#128274;</div><p>Kon orders niet ophalen</p></div>';
+    document.getElementById('count').textContent = '!';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>&#8635;</span> Vernieuwen';
+  }
+}
+function renderOrders(orders) {
+  document.getElementById('count').textContent = orders.length;
+  const c = document.getElementById('ordersContainer');
+  if (!orders.length) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">&#9989;</div><p>Geen DAGBEZORGING orders klaar voor verzending</p></div>';
+    return;
+  }
+  c.innerHTML = orders.map(o => {
+    const addr = o.billingAddress || {};
+    const name = [addr.firstName, addr.lastName].filter(Boolean).join(' ') || o.email || 'Onbekend';
+    const total = o.priceIncl ? '&euro;' + parseFloat(o.priceIncl).toFixed(2) : '-';
+    const date = o.createdAt ? new Date(o.createdAt).toLocaleString('nl-NL') : '-';
+    const ship = o.shippingTitle || o.shippingMethod || 'DAGBEZORGING';
+    const num = o.number || o.id || '-';
+    return `<div class="order-card">
+      <div class="order-header">
+        <span class="order-num">#${num}</span>
+        <span class="status-badge">Klaar voor verzending</span>
+      </div>
+      <div class="order-grid">
+        <div><div class="field-label">Klant</div><div class="field-val">${name}</div></div>
+        <div><div class="field-label">E-mail</div><div class="field-val">${o.email || '-'}</div></div>
+        <div><div class="field-label">Bedrag</div><div class="field-val">${total}</div></div>
+        <div><div class="field-label">Datum</div><div class="field-val">${date}</div></div>
+        <div><div class="field-label">Verzendmethode</div><div class="field-val"><span class="ship-badge">&#128666; ${ship}</span></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+loadOrders();
+</script>
+</body>
+</html>
