@@ -30,15 +30,15 @@ async function fetchOrders() {
 async function enrichOrders(orders) {
   const dagOrders = orders.filter(o => JSON.stringify(o).toUpperCase().includes('DAGBEZORGING'));
   const enriched = dagOrders.map((order) => {
-    const addr = order.billingAddress || {};
-    const firstName = addr.firstName || '';
-    const lastName = addr.lastName || '';
-    const klant = (firstName + ' ' + lastName).trim() || order.email || 'Onbekend';
+    const firstName = order.firstname || '';
+    const middleName = order.middlename || '';
+    const lastName = order.lastname || '';
+    const klant = [firstName, middleName, lastName].filter(Boolean).join(' ') || order.email || 'Onbekend';
     let shippingMethod = order.shippingTitle || order.shippingMethod || 'DAGBEZORGING';
     const orderStr = JSON.stringify(order);
     const dagMatch = orderStr.match(/"([^"]*[Dd][Aa][Gg][Bb][Ee][Zz][Oo][Rr][Gg][Ii][Nn][Gg][^"]*)"/);
     if (dagMatch) shippingMethod = dagMatch[1];
-    const ordNummer = 'ORD' + order.number;
+    const ordNummer = String(order.number || '').toUpperCase().startsWith('ORD') ? String(order.number) : 'ORD' + order.number;
     return { ...order, _klant: klant, _ordNummer: ordNummer, _shippingMethod: shippingMethod };
   });
   return enriched;
