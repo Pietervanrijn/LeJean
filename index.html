@@ -168,9 +168,9 @@
         var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('nl-NL', {day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
         var ship = o._shippingMethod || 'DAGBEZORGING';
         var email = o.email || (o.billingAddress && o.billingAddress.email) || '';
-        var postcode = (o.billingAddress && o.billingAddress.zipcode) || '';
-        var city = (o.billingAddress && o.billingAddress.city) || '';
-        var countryCode = (o.billingAddress && (o.billingAddress.countryCode || o.billingAddress.country)) || '';
+        var postcode = o.addressBillingZipcode || '';
+        var city = o.addressBillingCity || '';
+        var countryCode = (o.addressBillingCountry && (o.addressBillingCountry.code || o.addressBillingCountry.code3) || '').toUpperCase();
         var flag = getFlagEmoji(countryCode);
         var prods = Array.isArray(o.products) ? o.products : [];
         var itemCount = o.itemCount || o.productsCount || o.quantityOrdered || (prods.length > 0 ? prods.length : null);
