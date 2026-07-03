@@ -237,9 +237,9 @@ var orderDate = o.createdAt ? formatOrderDate(o.createdAt) : '-';
 var verzendMethode = o.shipmentIsPickup ? 'Afhalen bij LeJean in Leidschendam' : (o._shippingMethod || '-');
 var barcodeValue = 'PS' + String(o.id || o.number || '').padStart(16,'0');
 var rows = (products || []).map(function(p) {
-var title = p.title || p.fulltitle || p.name || '-';
-var sku = p.sku || p.ean13 || p.code || p.itemNumber || p.articleCode || '-';
-var qty = p.quantity || p.amount || 1;
+var title = (p.brandTitle ? p.brandTitle + ' ' : '') + (p.productTitle || p.title || p.fulltitle || p.name || '-') + (p.variantTitle ? ' | ' + p.variantTitle : '');
+var sku = p.articleCode || p.sku || p.ean || p.ean13 || p.code || p.itemNumber || '-';
+var qty = p.quantityOrdered || p.quantity || p.amount || 1;
 return '<tr><td class="item-title">' + title + '</td><td>' + sku + '</td><td class="qty-cell">' + qty + '</td></tr>';
 }).join('');
 return '<div class="pakbon-page">' +
