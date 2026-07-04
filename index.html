@@ -277,7 +277,7 @@ productsByOrder[o.id] = d.products || [];
 
 var pages = orders.map(function(o) { return buildPakbonHtml(o, productsByOrder[o.id] || []); }).join('');
 var win = window.open('', '_blank');
-win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pakbon</title>' + pakbonStyles() + '</head><body>' + pages + '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script><script>document.querySelectorAll(".barcode").forEach(function(el){ try { JsBarcode(el, el.getAttribute("data-code"), {format:"CODE128", displayValue:true, fontSize:12, height:40, margin:0}); } catch(e){} }); window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>');
+win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pakbon</title>' + pakbonStyles() + '</head><body>' + pages + '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script><script>document.querySelectorAll(".barcode").forEach(function(el){ try { JsBarcode(el, el.getAttribute("data-code"), {format:"CODE128", displayValue:true, fontSize:12, height:40, margin:0, width:1.5}); } catch(e){} }); window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>');
 win.document.close();
 
 await fetch('/api/print-status', {
