@@ -32,6 +32,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .print-dropdown-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.18);min-width:220px;z-index:20;overflow:hidden}
 .print-dropdown-item{padding:10px 16px;font-size:14px;color:#333;cursor:pointer;white-space:nowrap}
 .print-dropdown-item:hover{background:#f0f4f8}
+.print-dropdown-check{display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:#333;cursor:pointer}
+.print-dropdown-check:hover{background:#f0f4f8}
+.print-dropdown-check input{cursor:pointer}
+.print-dropdown-action{width:100%;border:none;background:#1a1a2e;color:#fff;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;border-top:1px solid rgba(0,0,0,.08)}
+.print-dropdown-action:hover{background:#0f1729}
+.print-btn-solo{border-radius:20px;display:inline-flex;align-items:center;gap:8px}
+.print-btn-arrow{font-size:11px}
 .stats{background:#fff;border-radius:12px;padding:20px 30px;margin-bottom:24px;display:flex;align-items:center;gap:20px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .count{font-size:48px;font-weight:800;color:#1a1a2e;line-height:1}
 .stats-labels{display:flex;flex-direction:column;gap:6px}
@@ -99,8 +106,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 <div class="toolbar">
 <div class="print-btn-group">
-<button class="print-btn print-btn-main" id="printBtn" onclick="printPakbonnen()" disabled>&#x1F5A8;&#xFE0F; Print pakbon (<span id="selCount">0</span>)</button><button type="button" class="print-btn-caret" id="printCaretBtn" onclick="toggleVerzendMenu(event)" disabled>&#x25BE;</button>
-<div class="print-dropdown-menu" id="verzendMenu"><div class="print-dropdown-item" onclick="printVerzendinformatie()">Verzendinformatie</div></div>
+<button type="button" class="print-btn print-btn-main print-btn-solo" id="printBtn" onclick="toggleVerzendMenu(event)" disabled>&#x1F5A8;&#xFE0F; Print (<span id="selCount">0</span>) <span class="print-btn-arrow">&#x25BE;</span></button>
+<div class="print-dropdown-menu" id="verzendMenu">
+<label class="print-dropdown-check"><input type="checkbox" id="chkPakbon" checked> Print pakbon</label>
+<label class="print-dropdown-check"><input type="checkbox" id="chkVerzend"> Verzendinformatie</label>
+<button type="button" class="print-dropdown-action" id="printExecBtn" onclick="executePrintSelection()">Uitvoeren</button>
+</div>
 </div> <select class="filter-select" id="methodFilter" onchange="applyFilter()">
 <option value="">Alle DAGBEZORGING methodes (0)</option>
 </select>
@@ -177,7 +188,6 @@ function updateSelection() {
 var checked = document.querySelectorAll('.order-checkbox:checked');
 var __selCountEl = document.getElementById('selCount'); if (__selCountEl) __selCountEl.textContent = checked.length;
 document.getElementById('printBtn').disabled = checked.length === 0;
-var __printCaretEl = document.getElementById('printCaretBtn'); if (__printCaretEl) __printCaretEl.disabled = checked.length === 0;
 }
 
 async function toggleBeide(orderNumber, currentStatus) {
@@ -305,6 +315,16 @@ e.stopPropagation();
 var menu = document.getElementById('verzendMenu');
 if (!menu) return;
 menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+async function executePrintSelection() {
+var menu = document.getElementById('verzendMenu');
+if (menu) menu.style.display = 'none';
+var doPakbon = document.getElementById('chkPakbon').checked;
+var doVerzend = document.getElementById('chkVerzend').checked;
+if (!doPakbon && !doVerzend) return;
+if (doPakbon) await printPakbonnen();
+if (doVerzend) await printVerzendinformatie();
 }
 
 document.addEventListener('click', function(e) {
