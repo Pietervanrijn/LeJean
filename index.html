@@ -247,12 +247,18 @@ var mi = String(d.getMinutes()).padStart(2,'0');
 return months[d.getMonth()] + ' ' + dd + ', ' + d.getFullYear() + ', ' + hh + ':' + mi;
 }
 
-function escapeHtml(str) { return String(str).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); } function buildPakbonHtml(o, products) { var naam = o.addressShippingName || o._klant || '-'; var streetLine = [o.addressShippingStreet, o.addressShippingNumber].filter(Boolean).join(' ') + (o.addressShippingExtension ? (' ' + o.addressShippingExtension) : ''); var zipcode = o.addressShippingZipcode || ''; var city = o.addressShippingCity || ''; var countryTitle = (o.addressShippingCountry && o.addressShippingCountry.title) || ''; var orderDate = o.createdAt ? formatOrderDate(o.createdAt) : '-'; var verzendMethode = o.shipmentIsPickup ? 'Afhalen bij LeJean in Leidschendam' : (o._shippingMethod || '-'); var barcodeValue = 'PS' + String(o.id || o.number || '').padStart(16,'0'); var opmerking = (o.comment || o.memo || '').toString().trim(); var sortedProducts = (products || []).slice().sort(function(a, b) { var skuA = a.articleCode || a.sku || a.ean || a.ean13 || a.code || a.itemNumber || ''; var skuB = b.articleCode || b.sku || b.ean || b.ean13 || b.code || b.itemNumber || ''; var numA = parseFloat(skuA), numB = parseFloat(skuB); if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB; return String(skuA).localeCompare(String(skuB), undefined, {numeric:true}); }); var rows = sortedProducts.map(function(p) { var title = (p.brandTitle ? p.brandTitle + ' ' : '') + (p.productTitle || p.title || p.fulltitle || p.name || '-') + (p.variantTitle ? ' | ' + p.variantTitle : ''); var sku = p.articleCode || p.sku || p.ean || p.ean13 || p.code || p.itemNumber || '-'; var qty = p.quantityOrdered || p.quantity || p.amount || 1; var qtyHtml = qty > 1 ? '<span class="qty-badge">' + qty + '</span>' : '<span class="qty-single">' + qty + '</span>'; return '<tr><td class="item-title">' + title + '</td><td class="sku-cell">' + sku + '</td><td class="qty-cell">' + qtyHtml + '</td></tr>'; }).join(''); return '<div class="pakbon-page">' + '<div class="pakbon-header"><div class="pakbon-logo">LeJean</div><div class="pakbon-barcode-wrap"><svg class="barcode" data-code="' + barcodeValue + '"></svg></div></div>' + '<div class="pakbon-info">' + '<div class="pakbon-col"><div class="pakbon-label">Orderdatum</div><div class="pakbon-value">' + orderDate + '</div>' + '<div class="pakbon-label pakbon-mt">Ordernummer</div><div class="pakbon-value">' + (o._ordNummer || o.number) + '</div>' + '<div class="pakbon-label pakbon-mt">Verzendmethode</div><div class="pakbon-value">' + verzendMethode + '</div></div>' + '<div class="pakbon-col"><div class="pakbon-label">Van</div><div class="pakbon-value"><b>LeJean</b></div></div>' + '<div class="pakbon-col"><div class="pakbon-label">Naar</div><div class="pakbon-value"><b>' + naam + '</b><br>' + streetLine + '<br>' + zipcode + '<br>' + city + '<br>' + countryTitle + '</div></div>' + '</div>' + '<table class="pakbon-items"><thead><tr><th class="item-col">Item</th><th class="sku-col">SKU</th><th class="qty-col">Aantal</th></tr></thead><tbody>' + (rows || '<tr><td colspan="3" style="color:#999">Geen artikelen gevonden</td></tr>') + '</tbody></table>' + (opmerking ? ('<div class="pakbon-remark"><div class="pakbon-label">Jouw bericht:</div><div class="pakbon-remark-text">' + escapeHtml(opmerking) + '</div></div>') : '') + '</div>'; } function pakbonStyles() { return '<style>@page{size:A4 portrait;margin:15mm}*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif}body{margin:0;padding:0}.pakbon-page{padding:0;page-break-after:always}.pakbon-page:last-child{page-break-after:auto}@media screen{body{background:#666}.pakbon-page{background:#fff;max-width:210mm;margin:0 auto 24px auto;box-shadow:0 4px 14px rgba(0,0,0,.4);padding:15mm}}.pakbon-header{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:20px}.pakbon-logo{font-size:28px;font-weight:800}.pakbon-barcode-wrap{text-align:right}.pakbon-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;border-bottom:2px solid #000;padding-bottom:20px;margin-bottom:20px}.pakbon-label{font-weight:700;font-size:13px;margin-bottom:4px}.pakbon-mt{margin-top:12px}.pakbon-value{font-size:14px;line-height:1.5}.pakbon-items{width:100%;border-collapse:collapse;table-layout:fixed}.pakbon-items th{text-align:left;font-size:13px;font-weight:700;border-bottom:2px solid #000;padding:8px 4px}.pakbon-items td{padding:10px 4px;border-bottom:1px solid #ccc;font-size:14px;vertical-align:middle}.item-title{font-weight:700}.sku-col,.sku-cell{width:90px}.qty-col,.qty-cell{width:80px;text-align:center}.qty-badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;background:#000;color:#fff;border-radius:4px;font-weight:700;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}.qty-single{font-size:14px;color:#333}.pakbon-remark{margin-top:20px;border-top:1px solid #ccc;padding-top:12px}.pakbon-remark-text{font-size:14px;color:#0a6ed1;margin-top:4px}</style>'; } async function printPakbonnen() {
+function escapeHtml(str) { return String(str).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); } function buildPakbonHtml(o, products) { var naam = o.addressShippingName || o._klant || '-'; var streetLine = [o.addressShippingStreet, o.addressShippingNumber].filter(Boolean).join(' ') + (o.addressShippingExtension ? (' ' + o.addressShippingExtension) : ''); var zipcode = o.addressShippingZipcode || ''; var city = o.addressShippingCity || ''; var countryTitle = (o.addressShippingCountry && o.addressShippingCountry.title) || ''; var orderDate = o.createdAt ? formatOrderDate(o.createdAt) : '-'; var verzendMethode = o.shipmentIsPickup ? 'Afhalen bij LeJean in Leidschendam' : (o._shippingMethod || '-'); var barcodeValue = 'PS' + String(o.id || o.number || '').padStart(16,'0'); var opmerking = (o.comment || o.memo || '').toString().trim(); var sortedProducts = (products || []).slice().sort(function(a, b) { var skuA = a.articleCode || a.sku || a.ean || a.ean13 || a.code || a.itemNumber || ''; var skuB = b.articleCode || b.sku || b.ean || b.ean13 || b.code || b.itemNumber || ''; var numA = parseFloat(skuA), numB = parseFloat(skuB); if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB; return String(skuA).localeCompare(String(skuB), undefined, {numeric:true}); }); var rows = sortedProducts.map(function(p) { var title = (p.brandTitle ? p.brandTitle + ' ' : '') + (p.productTitle || p.title || p.fulltitle || p.name || '-') + (p.variantTitle ? ' | ' + p.variantTitle : ''); var sku = p.articleCode || p.sku || p.ean || p.ean13 || p.code || p.itemNumber || '-'; var qty = p.quantityOrdered || p.quantity || p.amount || 1; var qtyHtml = qty > 1 ? '<span class="qty-badge">' + qty + '</span>' : '<span class="qty-single">' + qty + '</span>'; return '<tr><td class="item-title">' + title + '</td><td class="sku-cell">' + sku + '</td><td class="qty-cell">' + qtyHtml + '</td></tr>'; }).join(''); return '<div class="pakbon-page">' + '<div class="pakbon-header"><div class="pakbon-logo">LeJean</div><div class="pakbon-barcode-wrap"><svg class="barcode" data-code="' + barcodeValue + '"></svg></div></div>' + '<div class="pakbon-info">' + '<div class="pakbon-col"><div class="pakbon-label">Orderdatum</div><div class="pakbon-value">' + orderDate + '</div>' + '<div class="pakbon-label pakbon-mt">Ordernummer</div><div class="pakbon-value">' + (o._ordNummer || o.number) + '</div>' + '<div class="pakbon-label pakbon-mt">Verzendmethode</div><div class="pakbon-value">' + verzendMethode + '</div></div>' + '<div class="pakbon-col"><div class="pakbon-label">Van</div><div class="pakbon-value"><b>LeJean</b></div></div>' + '<div class="pakbon-col"><div class="pakbon-label">Naar</div><div class="pakbon-value"><b>' + naam + '</b><br>' + streetLine + '<br>' + zipcode + '<br>' + city + '<br>' + countryTitle + '</div></div>' + '</div>' + '<table class="pakbon-items"><thead><tr><th class="item-col">Item</th><th class="sku-col">SKU</th><th class="qty-col">Aantal</th></tr></thead><tbody>' + (rows || '<tr><td colspan="3" style="color:#999">Geen artikelen gevonden</td></tr>') + '</tbody></table>' + (opmerking ? ('<div class="pakbon-remark"><div class="pakbon-label">Jouw bericht:</div><div class="pakbon-remark-text">' + escapeHtml(opmerking) + '</div></div>') : '') + '</div>'; } function pakbonStyles() { return '<style>@page{size:A4 portrait;margin:15mm}*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif}body{margin:0;padding:0}.pakbon-page{padding:0;page-break-after:always}.pakbon-page:last-child{page-break-after:auto}@media screen{body{background:#666}.pakbon-page{background:#fff;max-width:210mm;margin:0 auto 24px auto;box-shadow:0 4px 14px rgba(0,0,0,.4);padding:15mm}}.pakbon-header{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:20px}.pakbon-logo{font-size:28px;font-weight:800}.pakbon-barcode-wrap{text-align:right}.pakbon-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;border-bottom:2px solid #000;padding-bottom:20px;margin-bottom:20px}.pakbon-label{font-weight:700;font-size:13px;margin-bottom:4px}.pakbon-mt{margin-top:12px}.pakbon-value{font-size:14px;line-height:1.5}.pakbon-items{width:100%;border-collapse:collapse;table-layout:fixed}.pakbon-items th{text-align:left;font-size:13px;font-weight:700;border-bottom:2px solid #000;padding:8px 4px}.pakbon-items td{padding:10px 4px;border-bottom:1px solid #ccc;font-size:14px;vertical-align:middle}.item-title{font-weight:700}.sku-col,.sku-cell{width:90px}.qty-col,.qty-cell{width:80px;text-align:center}.qty-badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;background:#000;color:#fff;border-radius:4px;font-weight:700;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}.qty-single{font-size:14px;color:#333}.pakbon-remark{margin-top:20px;border-top:1px solid #ccc;padding-top:12px}.pakbon-remark-text{font-size:14px;color:#0a6ed1;margin-top:4px}</style>'; } async function printPakbonnen(preSelected) {
+var ids, nums, orders;
+if (preSelected) {
+ids = preSelected.ids; nums = preSelected.nums; orders = preSelected.orders;
+} else {
 var checked = Array.from(document.querySelectorAll('.order-checkbox:checked'));
 if (!checked.length) return;
-var ids = checked.map(function(cb){ return cb.getAttribute('data-id'); });
-var nums = checked.map(function(cb){ return cb.getAttribute('data-num'); });
-var orders = ids.map(function(id){ return allOrders.find(function(o){ return String(o.id) === String(id); }); }).filter(Boolean);
+ids = checked.map(function(cb){ return cb.getAttribute('data-id'); });
+nums = checked.map(function(cb){ return cb.getAttribute('data-num'); });
+orders = ids.map(function(id){ return allOrders.find(function(o){ return String(o.id) === String(id); }); }).filter(Boolean);
+}
+if (!orders.length) return;
 
 var btn = document.getElementById('printBtn');
 var origText = btn.innerHTML;
@@ -317,14 +323,24 @@ if (!menu) return;
 menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
 
+function getSelectedOrders() {
+var checked = Array.from(document.querySelectorAll('.order-checkbox:checked'));
+var ids = checked.map(function(cb){ return cb.getAttribute('data-id'); });
+var nums = checked.map(function(cb){ return cb.getAttribute('data-num'); });
+var orders = ids.map(function(id){ return allOrders.find(function(o){ return String(o.id) === String(id); }); }).filter(Boolean);
+return { ids: ids, nums: nums, orders: orders };
+}
+
 async function executePrintSelection() {
 var menu = document.getElementById('verzendMenu');
 if (menu) menu.style.display = 'none';
 var doPakbon = document.getElementById('chkPakbon').checked;
 var doVerzend = document.getElementById('chkVerzend').checked;
 if (!doPakbon && !doVerzend) return;
-if (doPakbon) await printPakbonnen();
-if (doVerzend) await printVerzendinformatie();
+var sel = getSelectedOrders();
+if (!sel.orders.length) return;
+if (doPakbon) await printPakbonnen(sel);
+if (doVerzend) await printVerzendinformatie(sel.orders);
 }
 
 document.addEventListener('click', function(e) {
@@ -343,13 +359,19 @@ document.head.appendChild(s);
 });
 }
 
-async function printVerzendinformatie() {
+async function printVerzendinformatie(preOrders) {
 var menu = document.getElementById('verzendMenu');
 if (menu) menu.style.display = 'none';
+var orders;
+if (preOrders) {
+orders = preOrders;
+} else {
 var checked = Array.from(document.querySelectorAll('.order-checkbox:checked'));
 if (!checked.length) return;
 var ids = checked.map(function(cb){ return cb.getAttribute('data-id'); });
-var orders = ids.map(function(id){ return allOrders.find(function(o){ return String(o.id) === String(id); }); }).filter(Boolean);
+orders = ids.map(function(id){ return allOrders.find(function(o){ return String(o.id) === String(id); }); }).filter(Boolean);
+}
+if (!orders.length) return;
 var methods = Array.from(new Set(orders.map(function(o){ return o._shippingMethod; })));
 if (methods.length > 1) { alert('Selecteer alleen orders met dezelfde verzendmethode voor de Verzendinformatie-export.'); return; }
 var method = methods[0] || 'Verzendinformatie';
