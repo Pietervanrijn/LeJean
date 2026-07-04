@@ -24,6 +24,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .print-btn{background:#1a1a2e;color:#fff;border:none;padding:9px 22px;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s}
 .print-btn:hover:not(:disabled){background:#0f1729}
 .print-btn:disabled{opacity:.35;cursor:not-allowed}
+.print-btn-group{position:relative;display:inline-flex;align-items:stretch}
+.print-btn-main{border-radius:20px 0 0 20px}
+.print-btn-caret{background:#1a1a2e;color:#fff;border:none;border-left:1px solid rgba(255,255,255,.25);padding:9px 12px;border-radius:0 20px 20px 0;font-size:12px;cursor:pointer;transition:all .2s}
+.print-btn-caret:hover:not(:disabled){background:#0f1729}
+.print-btn-caret:disabled{opacity:.35;cursor:not-allowed}
+.print-dropdown-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.18);min-width:220px;z-index:20;overflow:hidden}
+.print-dropdown-item{padding:10px 16px;font-size:14px;color:#333;cursor:pointer;white-space:nowrap}
+.print-dropdown-item:hover{background:#f0f4f8}
 .stats{background:#fff;border-radius:12px;padding:20px 30px;margin-bottom:24px;display:flex;align-items:center;gap:20px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .count{font-size:48px;font-weight:800;color:#1a1a2e;line-height:1}
 .stats-labels{display:flex;flex-direction:column;gap:6px}
@@ -90,7 +98,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 </div>
 <div class="toolbar">
-<button class="print-btn" id="printBtn" onclick="printPakbonnen()" disabled>&#x1F5A8;&#xFE0F; Print pakbon (<span id="selCount">0</span>)</button> <select class="filter-select" id="methodFilter" onchange="applyFilter()">
+<div class="print-btn-group">
+<button class="print-btn print-btn-main" id="printBtn" onclick="printPakbonnen()" disabled>&#x1F5A8;&#xFE0F; Print pakbon (<span id="selCount">0</span>)</button><button type="button" class="print-btn-caret" id="printCaretBtn" onclick="toggleVerzendMenu(event)" disabled>&#x25BE;</button>
+<div class="print-dropdown-menu" id="verzendMenu"><div class="print-dropdown-item" onclick="printVerzendinformatie()">Verzendinformatie</div></div>
+</div> <select class="filter-select" id="methodFilter" onchange="applyFilter()">
 <option value="">Alle DAGBEZORGING methodes (0)</option>
 </select>
 <select class="filter-select" id="printFilter" onchange="applyFilter()">
@@ -166,6 +177,7 @@ function updateSelection() {
 var checked = document.querySelectorAll('.order-checkbox:checked');
 var __selCountEl = document.getElementById('selCount'); if (__selCountEl) __selCountEl.textContent = checked.length;
 document.getElementById('printBtn').disabled = checked.length === 0;
+var __printCaretEl = document.getElementById('printCaretBtn'); if (__printCaretEl) __printCaretEl.disabled = checked.length === 0;
 }
 
 async function toggleBeide(orderNumber, currentStatus) {
@@ -267,6 +279,103 @@ alert('Fout bij printen: ' + e.message);
 } finally {
 btn.disabled = false;
 btn.innerHTML = origText;
+}
+}
+
+var MONTHS_NL = {januari:1,februari:2,maart:3,april:4,mei:5,juni:6,juli:7,augustus:8,september:9,oktober:10,november:11,december:12};
+
+function parseGewenst(shippingMethod, refDateIso) {
+var m = /([0-9]{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s*\(([0-9]{1,2}):([0-9]{2})\s*-\s*([0-9]{1,2}):([0-9]{2})\)/i.exec(shippingMethod || '');
+if (!m) return { van: '', tot: '' };
+var day = parseInt(m[1], 10);
+var month = MONTHS_NL[m[2].toLowerCase()];
+var vanTijd = m[3] + ':' + m[4];
+var totTijd = m[5] + ':' + m[6];
+var ref = refDateIso ? new Date(refDateIso) : new Date();
+var year = ref.getFullYear();
+var candidate = new Date(year, month - 1, day);
+var diffMonths = (candidate.getFullYear() - ref.getFullYear()) * 12 + (candidate.getMonth() - ref.getMonth());
+if (diffMonths < -6) year += 1;
+var dateStr = day + '-' + month + '-' + year;
+return { van: dateStr + ' van ' + vanTijd + 'uur', tot: dateStr + ' tot ' + totTijd };
+}
+
+function toggleVerzendMenu(e) {
+e.stopPropagation();
+var menu = document.getElementById('verzendMenu');
+if (!menu) return;
+menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(e) {
+var menu = document.getElementById('verzendMenu');
+if (menu && (!e.target.closest || !e.target.closest('.print-btn-group'))) menu.style.display = 'none';
+});
+
+function loadScript(src) {
+return new Promise(function(resolve, reject) {
+if (document.querySelector('script[src="' + src + '"]')) return resolve();
+var s = document.createElement('script');
+s.src = src;
+s.onload = resolve;
+s.onerror = reject;
+document.head.appendChild(s);
+});
+}
+
+async function printVerzendinformatie() {
+var menu = document.getElementById('verzendMenu');
+if (menu) menu.style.display = 'none';
+var checked = Array.from(document.querySelectorAll('.order-checkbox:checked'));
+if (!checked.length) return;
+var ids = checked.map(function(cb){ return cb.getAttribute('data-id'); });
+var orders = ids.map(function(id){ return allOrders.find(function(o){ return String(o.id) === String(id); }); }).filter(Boolean);
+var methods = Array.from(new Set(orders.map(function(o){ return o._shippingMethod; })));
+if (methods.length > 1) { alert('Selecteer alleen orders met dezelfde verzendmethode voor de Verzendinformatie-export.'); return; }
+var method = methods[0] || 'Verzendinformatie';
+
+try {
+await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+
+var headers = ['Contact (lossen)','Bedrijf (lossen)','Email (lossen)','Mobiel (lossen)','Straat (lossen)','Huisnummer (lossen)','Toevoeging','Postcode (lossen)','Plaats (lossen)','Land (lossen)','Gewenst (lossen)','Gewenst (lossen, tot)','Aantal - 1','Details - 1','Verpakking','Notities (lossen)'];
+
+var rows = orders.map(function(o) {
+var naam = o.addressShippingName || o._klant || [o.firstname, o.middlename, o.lastname].filter(Boolean).join(' ') || '';
+var gewenst = parseGewenst(o._shippingMethod, o.createdAt);
+var land = (o.addressShippingCountry && (o.addressShippingCountry.title || o.addressShippingCountry.code)) || '';
+var notities = (o.comment || o.memo || '').toString();
+return [
+naam,
+naam,
+o.email || '',
+o.mobile || o.phone || '',
+o.addressShippingStreet || '',
+o.addressShippingNumber || '',
+o.addressShippingExtension || '',
+o.addressShippingZipcode || '',
+o.addressShippingCity || '',
+land,
+gewenst.van,
+gewenst.tot,
+1,
+'Diepvries',
+'',
+notities
+];
+});
+
+var wb = XLSX.utils.book_new();
+var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+XLSX.utils.book_append_sheet(wb, ws, 'Verzendinformatie');
+
+var countRes = await fetch('/api/verzend-print-count', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ shippingMethod: method }) });
+var countData = await countRes.json();
+var safeMethod = method.replace(/[\\\/:*?"<>|]/g, '').trim();
+var filename = safeMethod + ' ' + countData.count + '.xlsx';
+
+XLSX.writeFile(wb, filename);
+} catch(e) {
+alert('Fout bij genereren Verzendinformatie: ' + e.message);
 }
 }
 
