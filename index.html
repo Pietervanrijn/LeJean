@@ -164,7 +164,7 @@ updateSelection();
 
 function updateSelection() {
 var checked = document.querySelectorAll('.order-checkbox:checked');
-document.getElementById('selCount').textContent = checked.length;
+var __selCountEl = document.getElementById('selCount'); if (__selCountEl) __selCountEl.textContent = checked.length;
 document.getElementById('printBtn').disabled = checked.length === 0;
 }
 
