@@ -228,7 +228,7 @@ var total = o.priceIncl ? String.fromCharCode(8364) + ' ' + parseFloat(o.priceIn
 var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('nl-NL', {day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
 var ship = o._shippingMethod || 'DAGBEZORGING';
 var shipPostcode = o.addressShippingZipcode || o.addressBillingZipcode || '';
-var waddenWarning = (ship === 'DAGBEZORGING' && isWaddenPostcode(shipPostcode));
+var waddenWarning = (ship.indexOf('DAGBEZORGING') === 0 && isWaddenPostcode(shipPostcode));
 var email = o.email || (o.billingAddress && o.billingAddress.email) || '';
 var postcode = o.addressBillingZipcode || '';
 var city = o.addressBillingCity || '';
