@@ -64,7 +64,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .order-checkbox{width:16px;height:16px;cursor:pointer;accent-color:#f0821e}
 .select-all-checkbox{width:16px;height:16px;cursor:pointer;accent-color:#f0821e}
 .status-text{font-weight:600;color:#33401f;font-size:13px}
-.shop-status-icon{width:28px;height:28px;background:#4caf50;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+.shop-status-icon{width:20px;height:20px;background:#4caf50;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px}
 .order-num-link{color:#1565c0;font-weight:700;font-size:14px;text-decoration:none}
 .order-num-link:hover{text-decoration:underline}
 .order-date{font-size:12px;color:#f0821e;margin-top:3px}
@@ -76,7 +76,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .inhoud-items{font-weight:600;color:#33401f;font-size:13px}
 .inhoud-detail{font-size:12px;color:#666;margin-top:2px}
 .klant-naam{color:#1565c0;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
-.flag-icon{width:15px;height:11px;border-radius:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);object-fit:cover;flex-shrink:0}
+.flag-icon{width:15px;height:11px;border-radius:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);display:inline-block;flex-shrink:0}
 .klant-email{font-size:12px;color:#666;margin-top:2px}
 .klant-adres{font-size:12px;color:#666;margin-top:2px;display:flex;align-items:center;gap:4px}
 .flag{font-size:14px}
@@ -147,7 +147,7 @@ var res = await fetch('/api/orders');
 if (!res.ok) throw new Error('Server error: ' + res.status);
 var data = await res.json();
 allOrders = data.orders || [];
-allOrders.sort(function(a, b) { var na = parseFloat(a._ordNummer || a.number || a.id || 0); var nb = parseFloat(b._ordNummer || b.number || b.id || 0); if (!isNaN(na) && !isNaN(nb)) return na - nb; return String(a._ordNummer || a.number || a.id || '').localeCompare(String(b._ordNummer || b.number || b.id || '')); });
+allOrders.sort(function(a, b) { var na = parseFloat(a._ordNummer || a.number || a.id || 0); var nb = parseFloat(b._ordNummer || b.number || b.id || 0); if (!isNaN(na) && !isNaN(nb)) return nb - na; return String(b._ordNummer || b.number || b.id || '').localeCompare(String(a._ordNummer || a.number || a.id || '')); });
 allMethods = data.shippingMethods || [];
 populateFilter(allMethods);
 applyFilter();
@@ -222,8 +222,30 @@ return (n >= 1790 && n <= 1797) || (n >= 8881 && n <= 8899) || (n >= 9160 && n <
 
 function getFlagEmoji(countryCode) {
 if (!countryCode) return '';
-var cc = countryCode.toLowerCase();
-return '<img class="flag-icon" src="https://flagcdn.com/24x18/' + cc + '.png" alt="' + countryCode + '">';
+var cc = countryCode.toUpperCase();
+var FLAG_BANDS = {
+'NL': { dir: 'h', colors: ['#AE1C28','#FFFFFF','#21468B'] },
+'BE': { dir: 'v', colors: ['#000000','#FAE042','#ED2939'] },
+'DE': { dir: 'h', colors: ['#000000','#DD0000','#FFCE00'] },
+'FR': { dir: 'v', colors: ['#0055A4','#FFFFFF','#EF4135'] },
+'GB': { dir: 'h', colors: ['#00247D','#FFFFFF','#CF142B'] },
+'US': { dir: 'h', colors: ['#B22234','#FFFFFF','#3C3B6E'] },
+'LU': { dir: 'h', colors: ['#ED2939','#FFFFFF','#00A1DE'] },
+'AT': { dir: 'h', colors: ['#ED2939','#FFFFFF','#ED2939'] },
+'IT': { dir: 'v', colors: ['#009246','#FFFFFF','#CE2B37'] },
+'ES': { dir: 'h', colors: ['#AA151B','#F1BF00','#AA151B'] },
+'PL': { dir: 'h', colors: ['#FFFFFF','#DC143C'] }
+};
+var flagData = FLAG_BANDS[cc] || { dir: 'h', colors: ['#999999','#cccccc','#999999'] };
+var n = flagData.colors.length;
+var stops = flagData.colors.map(function(c, i) {
+var start = Math.round((i / n) * 100);
+var end = Math.round(((i + 1) / n) * 100);
+return c + ' ' + start + '%, ' + c + ' ' + end + '%';
+}).join(', ');
+var angle = flagData.dir === 'v' ? '90deg' : '180deg';
+var gradient = 'linear-gradient(' + angle + ', ' + stops + ')';
+return '<div class="flag-icon" style="background:' + gradient + '" title="' + countryCode + '"></div>';
 }
 
 function renderOrders(orders) {
@@ -255,9 +277,9 @@ var printStatus = o._printStatus || 'geen';
 var printLabel = printStatus === 'beide' ? 'Beide geprint' : (printStatus === 'pakbon' ? 'Enkel pakbon' : 'Geen geprint');
 var printBadge = '<button type="button" class="geprint-badge geprint-' + printStatus + '" onclick="toggleBeide(\'' + ordNummer + '\',\'' + printStatus + '\')" title="Klik om te wisselen tussen Enkel pakbon en Beide geprint">' + printLabel + '</button>';
 
-return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + o.id + '" data-num="' + ordNummer + '" onchange="updateSelection()"></td><td><span class="status-text">Wacht op verzending</span></td><td><div class="shop-status-icon">&#10003;</div></td><td><a class="order-num-link" href="#">' + ordNummer + '</a><div class="order-date">' + date + '</div></td><td><div class="' + (waddenWarning ? "ship-method-wrap ship-wadden-warning" : "ship-method-wrap") + '"><div class="ship-icon">' + (waddenWarning ? "&#9888;" : "&#x1F69A;") + '</div><span class="ship-name">' + ship + '</span>' + (waddenWarning ? '<span class="wadden-badge" title="Postcode ligt op de Waddeneilanden: DAGBEZORGING is hier niet mogelijk">Waddeneilanden</span>' : '') + '</div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klant + '</div>' + (email ? '<div class="klant-email">' + email + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + [[postcode,city].filter(Boolean).join(', '), countryCode].filter(Boolean).join(' ') + '</div>' : '') + '</td><td>' + printBadge + '</td></tr>';
+return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + o.id + '" data-num="' + ordNummer + '" onchange="updateSelection()"></td><td><div class="shop-status-icon">&#10003;</div></td><td><span class="status-text">Wacht op verzending</span></td><td><a class="order-num-link" href="#">' + ordNummer + '</a><div class="order-date">' + date + '</div></td><td><div class="' + (waddenWarning ? "ship-method-wrap ship-wadden-warning" : "ship-method-wrap") + '"><div class="ship-icon">' + (waddenWarning ? "&#9888;" : "&#x1F69A;") + '</div><span class="ship-name">' + ship + '</span>' + (waddenWarning ? '<span class="wadden-badge" title="Postcode ligt op de Waddeneilanden: DAGBEZORGING is hier niet mogelijk">Waddeneilanden</span>' : '') + '</div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klant + '</div>' + (email ? '<div class="klant-email">' + email + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + [[postcode,city].filter(Boolean).join(', '), countryCode].filter(Boolean).join(' ') + '</div>' : '') + '</td><td>' + printBadge + '</td></tr>';
 }).join('');
-c.innerHTML = '<div class="orders-table-wrap"><table class="orders-table"><thead><tr><th><input type="checkbox" id="selectAllCheckbox" class="select-all-checkbox" onchange="toggleSelectAll(this)" title="Alles selecteren"></th><th>STATUS</th><th>SHOP STATUS</th><th>ORDER</th><th>VERZENDMETHODE</th><th>INHOUD VAN DE BESTELLING</th><th>KLANT</th><th>GEPRINT</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+c.innerHTML = '<div class="orders-table-wrap"><table class="orders-table"><thead><tr><th><input type="checkbox" id="selectAllCheckbox" class="select-all-checkbox" onchange="toggleSelectAll(this)" title="Alles selecteren"></th><th>SHOP STATUS</th><th>STATUS</th><th>ORDER</th><th>VERZENDMETHODE</th><th>INHOUD VAN DE BESTELLING</th><th>KLANT</th><th>GEPRINT</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
 function formatOrderDate(iso) {
