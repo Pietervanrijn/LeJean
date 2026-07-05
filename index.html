@@ -71,7 +71,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ship-name{font-weight:500;color:#333;font-size:13px}
 .inhoud-items{font-weight:600;color:#1a1a2e;font-size:13px}
 .inhoud-detail{font-size:12px;color:#666;margin-top:2px}
-.klant-naam{color:#1565c0;font-weight:600;font-size:13px}
+.klant-naam{color:#1565c0;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
+.flag-icon{width:20px;height:15px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.15);object-fit:cover;flex-shrink:0}
 .klant-email{font-size:12px;color:#666;margin-top:2px}
 .klant-adres{font-size:12px;color:#666;margin-top:2px;display:flex;align-items:center;gap:4px}
 .flag{font-size:14px}
@@ -200,10 +201,8 @@ applyFilter();
 
 function getFlagEmoji(countryCode) {
 if (!countryCode) return '';
-var code = countryCode.toUpperCase();
-return code.replace(/./g, function(c) {
-return String.fromCodePoint(c.charCodeAt(0) + 127397);
-});
+var cc = countryCode.toLowerCase();
+return '<img class="flag-icon" src="https://flagcdn.com/24x18/' + cc + '.png" alt="' + countryCode + '">';
 }
 
 function renderOrders(orders) {
@@ -233,7 +232,7 @@ var printStatus = o._printStatus || 'geen';
 var printLabel = printStatus === 'beide' ? 'Beide geprint' : (printStatus === 'pakbon' ? 'Enkel pakbon' : 'Geen geprint');
 var printBadge = '<button type="button" class="geprint-badge geprint-' + printStatus + '" onclick="toggleBeide(\'' + ordNummer + '\',\'' + printStatus + '\')" title="Klik om te wisselen tussen Enkel pakbon en Beide geprint">' + printLabel + '</button>';
 
-return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + o.id + '" data-num="' + ordNummer + '" onchange="updateSelection()"></td><td><span class="status-text">Wacht op verzending</span></td><td><div class="shop-status-icon">&#10003;</div></td><td><a class="order-num-link" href="#">' + ordNummer + '</a><div class="order-date">' + date + '</div></td><td><div class="ship-method-wrap"><div class="ship-icon">&#x1F69A;</div><span class="ship-name">' + ship + '</span></div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag + ' ' : '') + klant + '</div>' + (email ? '<div class="klant-email">' + email + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + [[postcode,city].filter(Boolean).join(', '), countryCode].filter(Boolean).join(' ') + '</div>' : '') + '</td><td>' + printBadge + '</td></tr>';
+return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + o.id + '" data-num="' + ordNummer + '" onchange="updateSelection()"></td><td><span class="status-text">Wacht op verzending</span></td><td><div class="shop-status-icon">&#10003;</div></td><td><a class="order-num-link" href="#">' + ordNummer + '</a><div class="order-date">' + date + '</div></td><td><div class="ship-method-wrap"><div class="ship-icon">&#x1F69A;</div><span class="ship-name">' + ship + '</span></div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klant + '</div>' + (email ? '<div class="klant-email">' + email + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + [[postcode,city].filter(Boolean).join(', '), countryCode].filter(Boolean).join(' ') + '</div>' : '') + '</td><td>' + printBadge + '</td></tr>';
 }).join('');
 c.innerHTML = '<div class="orders-table-wrap"><table class="orders-table"><thead><tr><th></th><th>STATUS</th><th>SHOP STATUS</th><th>ORDER</th><th>VERZENDMETHODE</th><th>INHOUD VAN DE BESTELLING</th><th>KLANT</th><th>GEPRINT</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
