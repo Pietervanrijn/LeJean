@@ -162,4 +162,4 @@ saveVerzendCounts(verzendCountStore);
 res.json({ ok: true, count: current });
 });
 
-app.listen(PORT, () => console.log('Chill-Bill running on port ' + PORT));
+app.listen(PORT, () => console.log('LeJean running on port ' + PORT));
