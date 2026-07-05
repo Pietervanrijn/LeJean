@@ -62,6 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .orders-table tbody td{padding:14px 16px;vertical-align:middle;font-size:14px;color:#333}
 .orders-table tbody td:first-child{padding-left:20px}
 .order-checkbox{width:16px;height:16px;cursor:pointer;accent-color:#f0821e}
+.select-all-checkbox{width:16px;height:16px;cursor:pointer;accent-color:#f0821e}
 .status-text{font-weight:600;color:#33401f;font-size:13px}
 .shop-status-icon{width:28px;height:28px;background:#4caf50;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
 .order-num-link{color:#1565c0;font-weight:700;font-size:14px;text-decoration:none}
@@ -146,6 +147,7 @@ var res = await fetch('/api/orders');
 if (!res.ok) throw new Error('Server error: ' + res.status);
 var data = await res.json();
 allOrders = data.orders || [];
+allOrders.sort(function(a, b) { var na = parseFloat(a._ordNummer || a.number || a.id || 0); var nb = parseFloat(b._ordNummer || b.number || b.id || 0); if (!isNaN(na) && !isNaN(nb)) return na - nb; return String(a._ordNummer || a.number || a.id || '').localeCompare(String(b._ordNummer || b.number || b.id || '')); });
 allMethods = data.shippingMethods || [];
 populateFilter(allMethods);
 applyFilter();
@@ -189,9 +191,17 @@ updateSelection();
 
 function updateSelection() {
 var checked = document.querySelectorAll('.order-checkbox:checked');
+var allBoxes = document.querySelectorAll('.order-checkbox');
 var __selCountEl = document.getElementById('selCount'); if (__selCountEl) __selCountEl.textContent = checked.length;
 document.getElementById('printBtn').disabled = checked.length === 0;
 var __caretBtn = document.getElementById('printCaretBtn'); if (__caretBtn) __caretBtn.disabled = checked.length === 0;
+var __selectAllCb = document.getElementById('selectAllCheckbox'); if (__selectAllCb) { __selectAllCb.checked = allBoxes.length > 0 && checked.length === allBoxes.length; }
+}
+
+function toggleSelectAll(cb) {
+var boxes = document.querySelectorAll('.order-checkbox');
+boxes.forEach(function(b){ b.checked = cb.checked; });
+updateSelection();
 }
 
 async function toggleBeide(orderNumber, currentStatus) {
@@ -247,7 +257,7 @@ var printBadge = '<button type="button" class="geprint-badge geprint-' + printSt
 
 return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + o.id + '" data-num="' + ordNummer + '" onchange="updateSelection()"></td><td><span class="status-text">Wacht op verzending</span></td><td><div class="shop-status-icon">&#10003;</div></td><td><a class="order-num-link" href="#">' + ordNummer + '</a><div class="order-date">' + date + '</div></td><td><div class="' + (waddenWarning ? "ship-method-wrap ship-wadden-warning" : "ship-method-wrap") + '"><div class="ship-icon">' + (waddenWarning ? "&#9888;" : "&#x1F69A;") + '</div><span class="ship-name">' + ship + '</span>' + (waddenWarning ? '<span class="wadden-badge" title="Postcode ligt op de Waddeneilanden: DAGBEZORGING is hier niet mogelijk">Waddeneilanden</span>' : '') + '</div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klant + '</div>' + (email ? '<div class="klant-email">' + email + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + [[postcode,city].filter(Boolean).join(', '), countryCode].filter(Boolean).join(' ') + '</div>' : '') + '</td><td>' + printBadge + '</td></tr>';
 }).join('');
-c.innerHTML = '<div class="orders-table-wrap"><table class="orders-table"><thead><tr><th></th><th>STATUS</th><th>SHOP STATUS</th><th>ORDER</th><th>VERZENDMETHODE</th><th>INHOUD VAN DE BESTELLING</th><th>KLANT</th><th>GEPRINT</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+c.innerHTML = '<div class="orders-table-wrap"><table class="orders-table"><thead><tr><th><input type="checkbox" id="selectAllCheckbox" class="select-all-checkbox" onchange="toggleSelectAll(this)" title="Alles selecteren"></th><th>STATUS</th><th>SHOP STATUS</th><th>ORDER</th><th>VERZENDMETHODE</th><th>INHOUD VAN DE BESTELLING</th><th>KLANT</th><th>GEPRINT</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
 function formatOrderDate(iso) {
