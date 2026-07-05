@@ -69,6 +69,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ship-method-wrap{display:flex;align-items:center;gap:10px}
 .ship-icon{width:28px;height:28px;border-radius:6px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
 .ship-name{font-weight:500;color:#333;font-size:13px}
+.ship-wadden-warning .ship-icon{background:#b91c1c}
+.wadden-badge{background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
 .inhoud-items{font-weight:600;color:#1a1a2e;font-size:13px}
 .inhoud-detail{font-size:12px;color:#666;margin-top:2px}
 .klant-naam{color:#1565c0;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
@@ -199,6 +201,14 @@ allOrders.forEach(function(o){ if (o._ordNummer === orderNumber) o._printStatus 
 applyFilter();
 }
 
+function isWaddenPostcode(pc) {
+if (!pc) return false;
+var m = String(pc).trim().match(/^(\d{4})/);
+if (!m) return false;
+var n = parseInt(m[1], 10);
+return (n >= 1790 && n <= 1797) || (n >= 8881 && n <= 8899) || (n >= 9160 && n <= 9164) || n === 9166;
+}
+
 function getFlagEmoji(countryCode) {
 if (!countryCode) return '';
 var cc = countryCode.toLowerCase();
@@ -217,6 +227,8 @@ var ordNummer = o._ordNummer || o.number || String(o.id) || '-';
 var total = o.priceIncl ? String.fromCharCode(8364) + ' ' + parseFloat(o.priceIncl).toFixed(2).replace('.',',') : '-';
 var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('nl-NL', {day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
 var ship = o._shippingMethod || 'DAGBEZORGING';
+var shipPostcode = o.addressShippingZipcode || o.addressBillingZipcode || '';
+var waddenWarning = (ship === 'DAGBEZORGING' && isWaddenPostcode(shipPostcode));
 var email = o.email || (o.billingAddress && o.billingAddress.email) || '';
 var postcode = o.addressBillingZipcode || '';
 var city = o.addressBillingCity || '';
@@ -232,7 +244,7 @@ var printStatus = o._printStatus || 'geen';
 var printLabel = printStatus === 'beide' ? 'Beide geprint' : (printStatus === 'pakbon' ? 'Enkel pakbon' : 'Geen geprint');
 var printBadge = '<button type="button" class="geprint-badge geprint-' + printStatus + '" onclick="toggleBeide(\'' + ordNummer + '\',\'' + printStatus + '\')" title="Klik om te wisselen tussen Enkel pakbon en Beide geprint">' + printLabel + '</button>';
 
-return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + o.id + '" data-num="' + ordNummer + '" onchange="updateSelection()"></td><td><span class="status-text">Wacht op verzending</span></td><td><div class="shop-status-icon">&#10003;</div></td><td><a class="order-num-link" href="#">' + ordNummer + '</a><div class="order-date">' + date + '</div></td><td><div class="ship-method-wrap"><div class="ship-icon">&#x1F69A;</div><span class="ship-name">' + ship + '</span></div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klant + '</div>' + (email ? '<div class="klant-email">' + email + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + [[postcode,city].filter(Boolean).join(', '), countryCode].filter(Boolean).join(' ') + '</div>' : '') + '</td><td>' + printBadge + '</td></tr>';
+return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + o.id + '" data-num="' + ordNummer + '" onchange="updateSelection()"></td><td><span class="status-text">Wacht op verzending</span></td><td><div class="shop-status-icon">&#10003;</div></td><td><a class="order-num-link" href="#">' + ordNummer + '</a><div class="order-date">' + date + '</div></td><td><div class="' + (waddenWarning ? "ship-method-wrap ship-wadden-warning" : "ship-method-wrap") + '"><div class="ship-icon">' + (waddenWarning ? "&#9888;" : "&#x1F69A;") + '</div><span class="ship-name">' + ship + '</span>' + (waddenWarning ? '<span class="wadden-badge" title="Postcode ligt op de Waddeneilanden: DAGBEZORGING is hier niet mogelijk">Waddeneilanden</span>' : '') + '</div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klant + '</div>' + (email ? '<div class="klant-email">' + email + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + [[postcode,city].filter(Boolean).join(', '), countryCode].filter(Boolean).join(' ') + '</div>' : '') + '</td><td>' + printBadge + '</td></tr>';
 }).join('');
 c.innerHTML = '<div class="orders-table-wrap"><table class="orders-table"><thead><tr><th></th><th>STATUS</th><th>SHOP STATUS</th><th>ORDER</th><th>VERZENDMETHODE</th><th>INHOUD VAN DE BESTELLING</th><th>KLANT</th><th>GEPRINT</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
