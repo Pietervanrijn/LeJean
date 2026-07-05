@@ -47,9 +47,22 @@ page++;
 return all;
 }
 
+async async function fetchOrderProductsSummary(orderId) {
+try {
+const r = await axios.get('https://api.webshopapp.com/' + SHOP + '/orders/' + orderId + '/products.json', { headers: apiHeaders() });
+const products = r.data.orderProducts || r.data.products || [];
+const itemCount = products.length;
+const quantityOrdered = products.reduce(function(s,p){ return s + (p.quantityOrdered || 0); }, 0);
+return { itemCount: itemCount, quantityOrdered: quantityOrdered };
+} catch(e) {
+console.error('fetchOrderProductsSummary error:', e.message);
+return { itemCount: null, quantityOrdered: null };
+}
+}
+
 async function enrichOrders(orders) {
 const dagOrders = orders.filter(o => JSON.stringify(o).toUpperCase().includes('DAGBEZORGING'));
-const enriched = dagOrders.map((order) => {
+const enriched = await Promise.all(dagOrders.map(async (order) => {
 const firstName = order.firstname || '';
 const middleName = order.middlename || '';
 const lastName = order.lastname || '';
@@ -60,8 +73,9 @@ const dagMatch = orderStr.match(/"([^"]*[Dd][Aa][Gg][Bb][Ee][Zz][Oo][Rr][Gg][Ii]
 if (dagMatch) shippingMethod = dagMatch[1];
 const ordNummer = String(order.number || '').toUpperCase().startsWith('ORD') ? String(order.number) : 'ORD' + order.number;
 const printStatus = printStatusStore[String(order.number)] || 'geen';
-return { ...order, _klant: klant, _ordNummer: ordNummer, _shippingMethod: shippingMethod, _printStatus: printStatus };
-});
+const summary = await fetchOrderProductsSummary(order.id);
+return { ...order, _klant: klant, _ordNummer: ordNummer, _shippingMethod: shippingMethod, _printStatus: printStatus, itemCount: summary.itemCount, quantityOrdered: summary.quantityOrdered };
+}));
 return enriched;
 }
 
