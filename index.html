@@ -16,6 +16,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .refresh-btn{background:#f0821e;color:#fff;border:none;padding:10px 24px;border-radius:25px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
 .refresh-btn:hover{background:#f5a04a;transform:scale(1.05)}
 .refresh-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.tabs-bar{background:#ece9e2;border-radius:12px;padding:4px;margin-bottom:20px;display:flex;gap:2px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tab-btn{border:none;background:transparent;padding:12px 22px;border-radius:9px;font-size:14px;font-weight:600;color:#8a8a80;cursor:pointer;transition:all .15s;flex:1}
+.tab-btn:hover{color:#33401f}
+.tab-btn.active{background:#fff;color:#1a1a1a;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .container{max-width:1400px;margin:30px auto;padding:0 20px}
 .toolbar{background:#fff;border-radius:12px;padding:16px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);flex-wrap:wrap}
 .filter-label{font-size:13px;font-weight:600;color:#555;white-space:nowrap}
@@ -97,17 +101,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 </div>
 <div class="container">
-<div class="stats">
+<div class="tabs-bar">
+<button type="button" class="tab-btn active" id="tab-inkomend" onclick="switchTab('inkomend')">Inkomende orders</button>
+<button type="button" class="tab-btn" id="tab-label" onclick="switchTab('label')">Gecreëerde labels</button>
+<button type="button" class="tab-btn" id="tab-verzonden" onclick="switchTab('verzonden')">Verzonden</button>
+<button type="button" class="tab-btn" id="tab-geannuleerd" onclick="switchTab('geannuleerd')">Geannuleerd</button>
+</div>
+<div class="stats" id="statsBox">
 <div class="count" id="count">0</div>
 <div class="stats-labels">
-<span class="stats-title">Orders klaar voor verzending</span>
-<div>
+<span class="stats-title" id="statsTitle">Orders klaar voor verzending</span>
+<div id="statsBadges">
 <span class="badge badge-green">&#x1F69A; DAGBEZORGING</span>
 <span class="badge badge-blue" style="margin-left:6px">Klaar voor verzending</span>
 </div>
 </div>
 </div>
-<div class="toolbar">
+<div class="toolbar" id="toolbarBox">
 <div class="print-btn-group">
 <button type="button" class="print-btn print-btn-main" id="printBtn" onclick="executeCurrentPrintAction()" disabled>Aanmaken: <span id="printModeLabel">Pakbonnen</span> (<span id="selCount">0</span>)</button>
 <button type="button" class="print-btn-caret" id="printCaretBtn" onclick="toggleVerzendMenu(event)" disabled><span class="print-btn-arrow">&#x25BE;</span></button>
@@ -136,6 +146,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <script>
 var allOrders = [];
 var allMethods = [];
+var currentTab = 'inkomend';
+var TAB_LABELS = { inkomend: 'Orders klaar voor verzending', label: 'Labels aangemaakt', verzonden: 'Verzonden orders', geannuleerd: 'Geannuleerde orders' };
+var TAB_BADGE_DISPLAY = { inkomend: 'flex', label: 'none', verzonden: 'none', geannuleerd: 'none' };
+
+function switchTab(tab) {
+currentTab = tab;
+['inkomend','label','verzonden','geannuleerd'].forEach(function(t) {
+var btn = document.getElementById('tab-' + t);
+if (btn) btn.classList.toggle('active', t === tab);
+});
+var toolbar = document.getElementById('toolbarBox');
+if (toolbar) toolbar.style.display = (tab === 'inkomend') ? 'flex' : 'none';
+var titleEl = document.getElementById('statsTitle');
+if (titleEl) titleEl.textContent = TAB_LABELS[tab] || '';
+var badgesEl = document.getElementById('statsBadges');
+if (badgesEl) badgesEl.style.display = TAB_BADGE_DISPLAY[tab] || 'none';
+applyFilter();
+}
 
 async function loadOrders() {
 var btn = document.getElementById('refreshBtn');
@@ -178,7 +206,7 @@ sel.appendChild(opt);
 function applyFilter() {
 var selectedMethod = document.getElementById('methodFilter').value;
 var selectedPrint = document.getElementById('printFilter').value;
-var filtered = allOrders;
+var filtered = allOrders.filter(function(o){ return (o._orderStatus || 'inkomend') === currentTab; });
 if (selectedMethod) filtered = filtered.filter(function(o){ return o._shippingMethod === selectedMethod; });
 if (selectedPrint) filtered = filtered.filter(function(o){ return (o._printStatus || 'geen') === selectedPrint; });
 document.getElementById('count').textContent = filtered.length;
