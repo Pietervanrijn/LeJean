@@ -21,6 +21,15 @@ function savePrintStatus(data) {
 }
 let printStatusStore = loadPrintStatus();
 
+const ORDER_STATUS_FILE = __dirname + '/order-status.json';
+function loadOrderStatus() {
+try { return JSON.parse(fs.readFileSync(ORDER_STATUS_FILE, 'utf8')); } catch(e) { return {}; }
+}
+function saveOrderStatus(data) {
+try { fs.writeFileSync(ORDER_STATUS_FILE, JSON.stringify(data)); } catch(e) { console.error('saveOrderStatus error:', e.message); }
+}
+let orderStatusStore = loadOrderStatus();
+
 const VERZEND_COUNT_FILE = __dirname + '/verzend-count.json';
 function loadVerzendCounts() {
 try { return JSON.parse(fs.readFileSync(VERZEND_COUNT_FILE, 'utf8')); } catch(e) { return {}; }
@@ -83,8 +92,9 @@ if (pickupMatch) shippingMethod = pickupMatch[1];
 const isPickup = !!(order.shipmentIsPickup || /AFHALEN BIJ LEJEAN/i.test(shippingMethod));
 const ordNummer = String(order.number || '').toUpperCase().startsWith('ORD') ? String(order.number) : 'ORD' + order.number;
 const printStatus = printStatusStore[String(order.number)] || 'geen';
+const orderStatus = orderStatusStore[String(order.number)] || 'inkomend';
 const summary = await fetchOrderProductsSummary(order.id);
-return { ...order, _klant: klant, _ordNummer: ordNummer, _shippingMethod: shippingMethod, _isPickup: isPickup, _printStatus: printStatus, itemCount: summary.itemCount, quantityOrdered: summary.quantityOrdered };
+return { ...order, _klant: klant, _ordNummer: ordNummer, _shippingMethod: shippingMethod, _isPickup: isPickup, _printStatus: printStatus, _orderStatus: orderStatus, itemCount: summary.itemCount, quantityOrdered: summary.quantityOrdered };
 }));
 return enriched;
 }
@@ -125,6 +135,17 @@ printStatusStore[key] = status;
 });
 savePrintStatus(printStatusStore);
 res.json({ ok: true, printStatus: printStatusStore });
+});
+
+app.post('/api/order-status', (req, res) => {
+const { orderNumbers, status } = req.body || {};
+const allowedStatuses = ['inkomend', 'label', 'verzonden', 'geannuleerd'];
+if (!Array.isArray(orderNumbers) || !allowedStatuses.includes(status)) return res.status(400).json({ error: 'orderNumbers en een geldige status (inkomend, label, verzonden, geannuleerd) zijn verplicht' });
+orderNumbers.forEach(n => {
+orderStatusStore[String(n)] = status;
+});
+saveOrderStatus(orderStatusStore);
+res.json({ ok: true, orderStatus: orderStatusStore });
 });
 
 app.post('/api/mark-ready-pickup', async (req, res) => {
