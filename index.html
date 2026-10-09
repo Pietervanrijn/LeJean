@@ -81,6 +81,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ship-name{font-weight:500;color:#333;font-size:13px}
 .ship-wadden-warning .ship-icon{background:#b91c1c}
 .ship-wadden-warning .carrier-chip{background:#b91c1c1a;color:#b91c1c}
+.samen-badge{display:inline-block;margin-top:4px;background:#fff3e0;color:#b45309;border:1px solid #f59e0b;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;cursor:help}
+.orders-table tr.samen-row td{background:#fffbeb}
+.samen-alert{background:#fff7e6;border:1px solid #f59e0b;border-left:5px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:14px;color:#7c4a03;font-size:13.5px}
+.samen-alert-title{font-weight:800;margin-bottom:6px}
+.samen-alert ul{margin:0;padding-left:18px}
+.samen-alert li{margin:2px 0}
 .wadden-badge{background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
 .inhoud-items{font-weight:600;color:#33401f;font-size:13px}
 .inhoud-detail{font-size:12px;color:#666;margin-top:2px}
@@ -1301,10 +1307,71 @@ var chipHtml = info.logo
 return chipHtml + '<div class="ship-name-sub">' + escapeHtml(subLabel) + '</div>';
 }
 
+// "Samen verpakken"-alert (op verzoek van Pieter, 09-10-2026): heeft een
+// klant 2 (of meer) openstaande orders met dezelfde bezorgdatum naar
+// hetzelfde adres, dan kunnen die in 1 doos met 1 verzendlabel. De
+// bezorgdatum komt uit de verzendmethode-tekst (parseDateFromMethod), het
+// adres uit het verzendadres (postcode + huisnummer + toevoeging, inclusief
+// eventuele correctie via "Bewerk order"). Afhaal-orders worden gekoppeld op
+// e-mailadres + datum (1 tas aan de balie). Kijkt altijd naar ALLE inkomende
+// orders, niet alleen de gefilterde, zodat de alert ook verschijnt als de
+// tweede order door een filter even niet in beeld is.
+function samenvoegSleutel(o) {
+var datum = parseDateFromMethod(o._shippingMethod || '', new Date());
+if (!datum) return null;
+var dag = datum.getFullYear() + '-' + (datum.getMonth() + 1) + '-' + datum.getDate();
+var isPickup = !!(o.shipmentIsPickup || o._isPickup);
+if (isPickup) {
+var mail = String(o.email || '').trim().toLowerCase();
+return mail ? dag + '|afhalen|' + mail : null;
+}
+var pc = String(o.addressShippingZipcode || '').replace(/\s+/g, '').toUpperCase();
+var nr = String(o.addressShippingNumber || '').trim().toUpperCase();
+if (!pc || !nr) return null;
+var ext = String(o.addressShippingExtension || '').replace(/[\s\-]+/g, '').toUpperCase();
+return dag + '|' + pc + '|' + nr + '|' + ext;
+}
+
+function computeSamenvoegGroepen() {
+var groepen = {};
+allOrders.forEach(function(o) {
+if ((o._orderStatus || 'inkomend') !== 'inkomend') return;
+var key = samenvoegSleutel(o);
+if (!key) return;
+(groepen[key] = groepen[key] || []).push(o);
+});
+var perOrder = {};
+var lijst = [];
+Object.keys(groepen).forEach(function(key) {
+var g = groepen[key];
+if (g.length < 2) return;
+g.sort(function(a, b) { return String(a._ordNummer || a.number).localeCompare(String(b._ordNummer || b.number), undefined, { numeric: true }); });
+lijst.push(g);
+g.forEach(function(o) { perOrder[o._ordNummer || o.number] = g; });
+});
+return { perOrder: perOrder, lijst: lijst };
+}
+
+function samenvoegAlertHtml(lijst) {
+if (!lijst.length) return '';
+var items = lijst.map(function(g) {
+var o = g[0];
+var klant = o._klant || o.addressShippingName || o.email || 'Onbekende klant';
+var datum = parseDateFromMethod(o._shippingMethod || '', new Date());
+var datumTxt = datum ? datum.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+var nummers = g.map(function(x) { return x._ordNummer || x.number; }).join(' + ');
+var methodes = g.map(function(x) { return x._shippingMethod || ''; }).filter(function(m, i, arr) { return arr.indexOf(m) === i; });
+var verschil = methodes.length > 1 ? ' <i>(let op: verschillende verzendmethodes)</i>' : '';
+return '<li><b>' + escapeHtml(nummers) + '</b> &ndash; ' + escapeHtml(klant) + (datumTxt ? ', ' + escapeHtml(datumTxt) : '') + verschil + '</li>';
+}).join('');
+return '<div class="samen-alert"><div class="samen-alert-title">&#128230; ' + lijst.length + (lijst.length === 1 ? ' klant heeft' : ' klanten hebben') + ' meerdere orders op dezelfde bezorgdatum &ndash; verpak deze samen in 1 doos met 1 verzendlabel:</div><ul>' + items + '</ul></div>';
+}
+
 function renderOrders(orders) {
 var c = document.getElementById('ordersContainer');
+var samen = currentTab === 'inkomend' ? computeSamenvoegGroepen() : { perOrder: {}, lijst: [] };
 if (!orders.length) {
-c.innerHTML = '<div class="empty"><div class="empty-icon">&#9989;</div><p>Geen orders gevonden</p></div>';
+c.innerHTML = samenvoegAlertHtml(samen.lijst) + '<div class="empty"><div class="empty-icon">&#9989;</div><p>Geen orders gevonden</p></div>';
 return;
 }
 // Het potlood om verzendmethode/adres te corrigeren hoort alleen bij het
@@ -1323,6 +1390,12 @@ var shipCountryCode = ((o.addressShippingCountry && (o.addressShippingCountry.co
 var waddenWarning = (ship.indexOf('DAGBEZORGING') === 0 && isWaddenPostcode(shipPostcode));
 var trunkrsExclusion = getTrunkrsExclusionBadge(ship, shipCountryCode, shipPostcode);
 var hasShipWarning = waddenWarning || !!trunkrsExclusion;
+var samenGroep = samen.perOrder[o._ordNummer || o.number];
+var samenBadgeHtml = '';
+if (samenGroep) {
+var anderen = samenGroep.filter(function(x) { return x !== o; }).map(function(x) { return x._ordNummer || x.number; });
+samenBadgeHtml = '<div><span class="samen-badge" title="Zelfde klant, zelfde bezorgdatum en zelfde adres: samen verpakken in 1 doos met 1 verzendlabel">&#128230; Samen met ' + escapeHtml(anderen.join(', ')) + '</span></div>';
+}
 var shipWarningBadgeHtml = waddenWarning
 ? '<span class="wadden-badge" title="Postcode ligt op de Waddeneilanden: DAGBEZORGING is hier niet mogelijk">Waddeneilanden</span>'
 : (trunkrsExclusion ? '<span class="wadden-badge" title="' + escapeHtml(trunkrsExclusion.title) + '">' + escapeHtml(trunkrsExclusion.label) + '</span>' : '');
@@ -1352,9 +1425,10 @@ var printBadge = '<button type="button" class="geprint-badge geprint-' + printSt
 
 var statusLabel = currentTab === 'geannuleerd' ? 'Geannuleerd' : (currentTab === 'verzonden' ? 'Verzonden' : 'Wacht op verzending');
 var bewerkKolomHtml = showBewerkKolom ? '<td><button type="button" class="' + (o._hasOverride ? 'bewerk-order-btn bewerk-order-btn-active' : 'bewerk-order-btn') + '" onclick="openBewerkOrderModal(\'' + ordNummerSafe + '\')" title="' + (o._hasOverride ? 'Aangepast - klik om te bewerken' : 'Order bewerken (verzendmethode/verzender/adres/frozen)') + '">&#9998;</button></td>' : '';
-return '<tr><td><input type="checkbox" class="order-checkbox" data-id="' + idSafe + '" data-num="' + ordNummerSafe + '" onchange="updateSelection()"></td><td><div class="shop-status-icon">&#10003;</div></td><td><span class="status-text">' + escapeHtml(statusLabel) + '</span></td><td><a class="order-num-link" href="#" onclick="openLightspeedOrder(\'' + idSafe + '\');return false;" title="Openen in Lightspeed">' + ordNummerSafe + '</a><div class="order-date">' + dateSafe + '</div></td><td><div class="' + (hasShipWarning ? "ship-method-wrap ship-wadden-warning" : "ship-method-wrap") + '">' + shipMethodBadgeHtml(o) + shipWarningBadgeHtml + '</div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klantSafe + '</div>' + (email ? '<div class="klant-email">' + emailSafe + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + adresSafe + '</div>' : '') + '</td><td>' + printBadge + '</td>' + bewerkKolomHtml + '</tr>';
+return '<tr' + (samenGroep ? ' class="samen-row"' : '') + '><td><input type="checkbox" class="order-checkbox" data-id="' + idSafe + '" data-num="' + ordNummerSafe + '" onchange="updateSelection()"></td><td><div class="shop-status-icon">&#10003;</div></td><td><span class="status-text">' + escapeHtml(statusLabel) + '</span></td><td><a class="order-num-link" href="#" onclick="openLightspeedOrder(\'' + idSafe + '\');return false;" title="Openen in Lightspeed">' + ordNummerSafe + '</a><div class="order-date">' + dateSafe + '</div></td><td><div class="' + (hasShipWarning ? "ship-method-wrap ship-wadden-warning" : "ship-method-wrap") + '">' + shipMethodBadgeHtml(o) + shipWarningBadgeHtml + samenBadgeHtml + '</div></td><td><div class="inhoud-items">' + itemLabel + '</div>' + (qtyText ? '<div class="inhoud-detail">' + qtyText + '</div>' : '') + (valText ? '<div class="inhoud-detail">' + valText + '</div>' : '') + '</td><td><div class="klant-naam">' + (flag ? flag : '') + klantSafe + '</div>' + (email ? '<div class="klant-email">' + emailSafe + '</div>' : '') + ((postcode||city||countryCode) ? '<div class="klant-adres">' + adresSafe + '</div>' : '') + '</td><td>' + printBadge + '</td>' + bewerkKolomHtml + '</tr>';
 }).join('');
 c.innerHTML = '<div class="orders-table-wrap"><table class="orders-table"><thead><tr><th><input type="checkbox" id="selectAllCheckbox" class="select-all-checkbox" onchange="toggleSelectAll(this)" title="Alles selecteren"></th><th>SHOP STATUS</th><th>STATUS</th><th>ORDER</th><th>VERZENDMETHODE</th><th>INHOUD VAN DE BESTELLING</th><th>KLANT</th><th>GEPRINT</th>' + (showBewerkKolom ? '<th></th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+if (samen.lijst.length) c.innerHTML = samenvoegAlertHtml(samen.lijst) + c.innerHTML;
 }
 
 // "Bewerk order" (potlood-icoon, Inkomend-tabblad): verzendmethode + adres
